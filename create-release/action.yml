@@ -1,0 +1,64 @@
+name: Create GitHub Release
+description: >
+  Create GitHub Release with given tag.
+  If tag is not provided it fetches it using action:
+  StanislawHornaGitHub/GitHub_Release/get-release-tag
+
+inputs:
+  GH_TOKEN:
+    description: "GitHub token"
+    required: true
+  release_tag:
+    description: "Release tag"
+    default: ""
+    required: false
+
+outputs:
+  tag:
+    description: "Release version tag"
+    value: ${{ steps.release-tag.outputs.tag }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get next available release tag if not provided
+      if: inputs.release_tag == ''
+      id: next-release-tag
+      uses: StanislawHornaGitHub/GitHub_Release/get-release-tag@main
+      with:
+        GH_TOKEN: ${{ inputs.GH_TOKEN }}
+
+    - name: Fetch version to create
+      id: release-tag
+      shell: bash
+      run: |
+        if [ "${{ inputs.release_tag }}" == '' ]; then
+          echo "tag=${{ steps.next-release-tag.outputs.tag" >> $GITHUB_OUTPUT
+        else
+          echo "tag=${{ inputs.release_tag }}"
+        fi
+
+    - name: Create Release
+      shell: bash
+      run: |
+
+        VERSION="${{ steps.release-tag.outputs.tag }}"
+
+        json_body=$(jq -n \
+          --arg tag_name "$VERSION" \
+          --arg name "$VERSION Release" \
+          '{
+            tag_name: $tag_name,
+            name: $name,
+            draft: false,
+            prerelease: false,
+            generate_release_notes: false
+          }')
+
+        curl -L -s --fail-with-body \
+          -X POST \
+          --url "https://api.github.com/repos/${{ github.repository }}/releases" \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ inputs.GH_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          -d "$json_body"
