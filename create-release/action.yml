@@ -33,9 +33,9 @@ runs:
       shell: bash
       run: |
         if [ "${{ inputs.release_tag }}" == '' ]; then
-          echo "tag=${{ steps.next-release-tag.outputs.tag" >> $GITHUB_OUTPUT
+          echo "tag=${{ steps.next-release-tag.outputs.tag }}" >> $GITHUB_OUTPUT
         else
-          echo "tag=${{ inputs.release_tag }}"
+          echo "tag=${{ inputs.release_tag }}" >> $GITHUB_OUTPUT
         fi
 
     - name: Create Release
