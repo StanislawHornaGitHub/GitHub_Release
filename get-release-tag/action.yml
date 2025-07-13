@@ -1,0 +1,61 @@
+name: Get Release Tag
+description: >
+  Returns next available version tag.
+  Tags are in format: YY-ww-N
+    - YY - Last two digits of the current year (e.g., 25 for 2025)
+    - ww - ISO week number (01-53)
+    - N - The number of releases created so far in the current ISO week
+
+inputs:
+  GH_TOKEN:
+    description: "GitHub token"
+    required: true
+
+outputs:
+  tag:
+    description: "Available version tag"
+    value: ${{ steps.available-ver.outputs.version }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get base version
+      id: base-ver
+      shell: pwsh
+      run: |
+        $WeekNum = Get-Date -UFormat "%V"
+        $Year = $(Get-Date).ToString("yy")
+        $null = [System.Version]"$Year.$WeekNum.0"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "base_version=$Year.$WeekNum"
+
+    - name: Find Patch number
+      id: available-ver
+      shell: pwsh
+      env:
+        BASE: ${{ steps.base-ver.outputs.base_version }}
+      run: |
+        $PatchNum = 0
+        do {
+            $VersionToCheck = "$($env:BASE).$PatchNum"
+            try {
+                $null = Invoke-WebRequest -Headers @{
+                    "Accept"               = "application/vnd.github+json"
+                    "Authorization"        = "Bearer ${{ inputs.GH_TOKEN }}"
+                    "X-GitHub-Api-Version" = "2022-11-28"
+                } -Uri "https://api.github.com/repos/${{ github.repository }}/git/ref/tags/$VersionToCheck"
+            }
+            catch {
+                if ($_.Exception.StatusCode -eq "404") {
+                    break
+                }
+                else {
+                    throw $_.Exception.Message
+                }
+            }
+            $PatchNum++
+        } while ($PatchNum -le 1000) 
+
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$VersionToCheck"
+
+        Write-Host "Next available version tag is:"
+        [System.Version]$VersionToCheck
