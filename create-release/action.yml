@@ -2,7 +2,7 @@ name: Create GitHub Release
 description: >
   Create GitHub Release with given tag.
   If tag is not provided it fetches it using action:
-  StanislawHornaGitHub/GitHub_Release/get-release-tag
+  StanislawHorna/GitHub_Release/get-release-tag
 
 inputs:
   GH_TOKEN:
@@ -24,7 +24,7 @@ runs:
     - name: Get next available release tag if not provided
       if: inputs.release_tag == ''
       id: next-release-tag
-      uses: StanislawHornaGitHub/GitHub_Release/get-release-tag@main
+      uses: StanislawHorna/GitHub_Release/get-release-tag@main
       with:
         GH_TOKEN: ${{ inputs.GH_TOKEN }}
 
